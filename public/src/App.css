@@ -1,0 +1,72 @@
+#newProjectForm .MuiTextField-root,
+#newProjectForm .MuiOutlinedInput-root {
+    display: block;
+    width: 98%;
+    margin-bottom: 10px;
+}
+
+.MuiDialog-paper {
+    width: 40%;
+}
+
+.App {
+    text-align: center;
+}
+
+.App-logo {
+    height: 40vmin;
+    pointer-events: none;
+}
+
+.headSeparator {
+    margin-top: 85px;
+}
+
+.drawerHead {
+    display: flex;
+    justify-content: space-between !important;
+    margin-left: 15px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .App-logo {
+        animation: App-logo-spin infinite 20s linear;
+    }
+}
+
+.App-header {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
+}
+
+.MuiToolbar-regular {
+    display: flex;
+    justify-content: space-between;
+}
+
+.mainPaper * {
+    color: #fff !important;
+}
+
+.App-link {
+    color: #61dafb;
+}
+
+.App-header .mainPaper {
+    width: 90%;
+    height: 85vh;
+    background-color: #34495e !important;
+}
+
+@keyframes App-logo-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
