@@ -7,6 +7,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Nav from "./Nav";
 import Card from "./Card";
 import theme from "../theme";
+import Sprint from "./Sprint";
 import "../App.css";
 
 const useStyles = makeStyles(theme => ({
@@ -46,10 +47,28 @@ const themeDark = createMuiTheme({
 });
 */
 
+
+
+
+
 function App() {
     const classes = useStyles();
 
     //const [light, setLight] = React.useState(true);
+
+    const ProjSprints = ({sprints}) => (
+        <>
+          {sprints.map(sprint => (
+            <Sprint props={sprint} key={sprints.key}></Sprint>
+          ))}
+        </>
+    ); 
+
+    var sprintList = [
+        {name:'sprint1',key:'01'},
+        {name:'sprint2',key:'02'}
+    ];
+
 
     return (
         <MuiThemeProvider theme={theme}>
@@ -63,6 +82,7 @@ function App() {
                         elevation={3}
                     >
                         <h2>Team Infinity</h2>
+                        <ProjSprints sprints={sprintList} />
                     </Paper>
                 </header>
             </div>
