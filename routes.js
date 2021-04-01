@@ -94,7 +94,7 @@ router.post("/sprint", async(req, res) =>{
       let projectid = req.body.project_information_id;
       let is_initial_backlog_sprint = req.body.is_initial_backlog_sprint;
       let final_sprint = req.body.is_final_completion_sprint;
-      let sprint_begin_date = req.body.sprint_begin_datel
+      let sprint_begin_date = req.body.sprint_begin_date;
       let results = await dbRtns.addSprint(projectid, is_initial_backlog_sprint, final_sprint, sprint_begin_date);
       res.status(200).send({results:results});      
   } catch (err) {
