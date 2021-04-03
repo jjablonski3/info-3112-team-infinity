@@ -5,9 +5,8 @@ import { Paper, Button } from "@material-ui/core";
 import { MuiThemeProvider, createMuiTheme } from "@material-ui/core/styles";
 import { makeStyles } from "@material-ui/core/styles";
 import Nav from "./Nav";
-import Card from "./Card";
 import theme from "../theme";
-import Sprint from "./Sprint";
+import Sprints from "./Sprints";
 import "../App.css";
 
 const useStyles = makeStyles(theme => ({
@@ -58,15 +57,14 @@ function App() {
 
     const ProjSprints = ({sprints}) => (
         <>
-          {sprints.map(sprint => (
-            <Sprint props={sprint} key={sprints.key}></Sprint>
+          {sprints.map((sprint, keyIndex) => (
+            <Sprints props={sprint} key={keyIndex}></Sprints>
           ))}
         </>
     ); 
 
     var sprintList = [
-        {name:'sprint1',key:'01'},
-        {name:'sprint2',key:'02'}
+        {name:'sprint1',key:'01'}
     ];
 
 
