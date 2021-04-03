@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState, useEffect} from "react";
 import clsx from "clsx";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { Button } from "@material-ui/core";
@@ -25,73 +25,23 @@ import { StarBorder } from "@material-ui/icons";
 import ExpandLess from "@material-ui/icons/ExpandLess";
 import ExpandMore from "@material-ui/icons/ExpandMore";
 import theme from "../theme";
-import NewProjectModal from "./Modal";
+import NewProjectModal from "./AddNewProjectModal";
+import Sprints from "./Sprints";
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles(theme => ({
-    root: {
-        display: "flex"
-    },
-    appBar: {
-        transition: theme.transitions.create(["margin", "width"], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
-        })
-    },
-    appBarShift: {
-        width: `calc(100% - ${drawerWidth}px)`,
-        marginLeft: drawerWidth,
-        transition: theme.transitions.create(["margin", "width"], {
-            easing: theme.transitions.easing.easeOut,
-            duration: theme.transitions.duration.enteringScreen
-        })
-    },
-    menuButton: {
-        marginRight: theme.spacing(2)
-    },
-    hide: {
-        display: "none"
-    },
-    drawer: {
-        width: drawerWidth,
-        flexShrink: 0
-    },
-    drawerPaper: {
-        width: drawerWidth
-    },
-    drawerHeader: {
-        display: "flex",
-        alignItems: "center",
-        padding: theme.spacing(0, 1),
-        // necessary for content to be below app bar
-        ...theme.mixins.toolbar,
-        justifyContent: "flex-end"
-    },
-    content: {
-        flexGrow: 1,
-        padding: theme.spacing(3),
-        transition: theme.transitions.create("margin", {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
-        }),
-        marginLeft: -drawerWidth
-    },
-    contentShift: {
-        transition: theme.transitions.create("margin", {
-            easing: theme.transitions.easing.easeOut,
-            duration: theme.transitions.duration.enteringScreen
-        }),
-        marginLeft: 0
-    }
-}));
+
 
 export default function PersistentDrawerLeft() {
     const classes = useStyles();
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
     const [openModal, setOpenModal] = React.useState(false);
+    const [projectsArr, setProjectsArr] = React.useState([]);
     const [mode, setMode] = React.useState("Team Member");
+    const [dropdownState, setDropdownState] = useState({});
+
+
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -118,6 +68,35 @@ export default function PersistentDrawerLeft() {
     const handleModeChange = ev => {
         setMode(ev.target.innerText);
         setAnchorEl(null);
+    };
+
+    const handleExpand = ev => {
+        let currentId = ev.currentTarget.id;
+        if(dropdownState[currentId] != null){
+            setDropdownState({[currentId]: !dropdownState[currentId]});
+        }
+        else{
+            setDropdownState({[currentId]: true});
+        }
+    };
+
+    useEffect(() => {
+        fetchProjects();
+        console.log(projectsArr);
+    }, []);
+
+    //get the stories for the sprint parent (id passed through props)
+    const fetchProjects = async () => {
+        try {
+            let response = await fetch(`http://localhost:5000/api/projectinformationwithsprints`);
+            let json = await response.json();
+            console.log(json);
+            setProjectsArr(json?.rows);
+            console.log('here');
+        } catch (error) {
+            alert("failed to process the request: " + error.toString());
+            console.log(error);
+        }
     };
 
     return (
@@ -204,42 +183,83 @@ export default function PersistentDrawerLeft() {
                 </div>
                 <Divider />
                 <List>
-                    {/*["Inbox", "Starred", "Send email", "Drafts"].map(
-                        (text, index) => (
-                            <ListItem button key={text}>
-                                <ListItemIcon>
-                                    {index % 2 === 0 ? (
-                                        <InboxIcon />
-                                    ) : (
-                                        <MailIcon />
-                                    )}
-                                </ListItemIcon>
-                                <ListItemText primary={text} />
-                            </ListItem>
-                        )
-                                    )*/}
-                    <ListItem button>
+                {projectsArr?.map((proj, keyIndex) => (
+                    <div key={keyIndex}>
+                        <ListItem 
+                            button
+                            id={proj.project_information_id}
+                            onClick={(ev) => handleExpand(ev)}
+                        >
+                            <ListItemIcon>
+                                <AccountTreeIcon />
+                            </ListItemIcon>
+                            <ListItemText primary={proj.product_name} />
+                            {dropdownState[proj.project_information_id] ? 
+                                (<ExpandMore />) : (<ChevronRightIcon />)
+                            }
+                        </ListItem>
+                        <Collapse
+                            component="li"
+                            in={dropdownState[proj.project_information_id]}
+                            timeout="auto"
+                            unmountOnExit
+                        >
+                            <List>
+                                <ListItem>
+
+                                    <ListItemText>test44</ListItemText>
+                                </ListItem>
+                                <ListItem>
+                                    <ListItemText>test78</ListItemText>
+                                </ListItem>
+
+                                {proj?.sprintsdata?.map((spr, innerKeyIndex) =>
+                                    <ListItem key={innerKeyIndex}>
+                                        <ListItemText>{spr.is_initial_backlog_sprint ? "Product Backlog" : `Sprint ${keyIndex}`}test333545</ListItemText>
+                                    </ListItem>
+                                )}
+                            </List>
+                        </Collapse>
+                    </div>
+                ))}
+
+                {/*
+
+                
+                    <ListItem 
+                        button
+                        id="1"
+                        onClick={(ev) => handleExpand(ev)}
+                    >
                         <ListItemIcon>
                             <AccountTreeIcon />
                         </ListItemIcon>
                         <ListItemText primary="Project 1" />
+                        {dropdownState['1'] ? 
+                            (<ExpandMore />) : (<ChevronRightIcon />)
+                        }
                     </ListItem>
+                    <Collapse
+                        component="li"
+                        in={dropdownState['1']}
+                        timeout="auto"
+                        unmountOnExit
+                    >
+                        <List>
+                            <ListItem>
+                                <ListItemText primary="test123"/>
+                            </ListItem>
+                        </List>
+                    </Collapse>
+                    */}
 
-                    <ListItem button>
-                        <ListItemIcon>
-                            <AccountTreeIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Project 2" />
-                    </ListItem>
 
-                    <ListItem button>
-                        <ListItemIcon>
-                            <AccountTreeIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Project 3" />
-                    </ListItem>
+                <Divider />
 
-                    <Divider />
+
+
+
+
                     <ListItem button onClick={handleNewProject}>
                         <ListItemIcon>
                             <AddCircleIcon />
@@ -267,6 +287,63 @@ export default function PersistentDrawerLeft() {
         </div>
     );
 }
+
+const useStyles = makeStyles(theme => ({
+    root: {
+        display: "flex"
+    },
+    appBar: {
+        transition: theme.transitions.create(["margin", "width"], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen
+        })
+    },
+    appBarShift: {
+        width: `calc(100% - ${drawerWidth}px)`,
+        marginLeft: drawerWidth,
+        transition: theme.transitions.create(["margin", "width"], {
+            easing: theme.transitions.easing.easeOut,
+            duration: theme.transitions.duration.enteringScreen
+        })
+    },
+    menuButton: {
+        marginRight: theme.spacing(2)
+    },
+    hide: {
+        display: "none"
+    },
+    drawer: {
+        width: drawerWidth,
+        flexShrink: 0
+    },
+    drawerPaper: {
+        width: drawerWidth
+    },
+    drawerHeader: {
+        display: "flex",
+        alignItems: "center",
+        padding: theme.spacing(0, 1),
+        // necessary for content to be below app bar
+        ...theme.mixins.toolbar,
+        justifyContent: "flex-end"
+    },
+    content: {
+        flexGrow: 1,
+        padding: theme.spacing(3),
+        transition: theme.transitions.create("margin", {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen
+        }),
+        marginLeft: -drawerWidth
+    },
+    contentShift: {
+        transition: theme.transitions.create("margin", {
+            easing: theme.transitions.easing.easeOut,
+            duration: theme.transitions.duration.enteringScreen
+        }),
+        marginLeft: 0
+    }
+}));
 
 /*import React from "react";
 import { makeStyles } from "@material-ui/core/styles";

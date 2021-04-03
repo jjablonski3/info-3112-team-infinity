@@ -25,7 +25,19 @@ router.get("/projectinformation", async (req, res) => {
   try {
     let rows;  
     let results = await dbRtns.getProjectInformation();
-    rows = results.rows;
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+  } catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get project info failed - internal server error");
+  }
+});
+
+router.get("/projectinformationwithsprints", async (req, res) => {
+  try {
+    let rows;  
+    let results = await dbRtns.getProjectInformationWithSprints();
+    rows = results?.rows;
     res.status(200).send({rows:rows});
   } catch (err) {
     console.log(err.stack);
@@ -51,7 +63,7 @@ router.get("/teammembers", async (req, res) => {
   try {
     let rows;  
     let results = await dbRtns.getTeamMembers();
-    rows  = results.rows;
+    rows  = results?.rows;
     res.status(200).send({rows:rows});
       
   } catch (err) {
@@ -64,7 +76,7 @@ router.get("/sprint", async (req, res) =>{
   try{
     let rows;
     let results = await dbRtns.getAllSprints();
-    rows = results.rows;
+    rows = results?.rows;
     res.status(200).send({rows:rows});
 
   }catch (err) {
@@ -73,12 +85,27 @@ router.get("/sprint", async (req, res) =>{
   }
 });
 
-router.get("sprint/:id", async (req, res) => {
+router.get("/sprint/:id", async (req, res) => {
   try{
-    let id = req.body.id
+    let id = req.params.id
     let rows;
     let results = await dbRtns.getSprintById(id);
-    rows = results.rows;
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get sprint data failed - internal server error");
+  }
+  
+});
+
+router.get("/sprints/:id", async (req, res) => {
+  try{
+    let id = req.params.id
+    let rows;
+    let results = await dbRtns.getSprintsByProjId(id);
+    rows = results?.rows;
     res.status(200).send({rows:rows});
 
   }catch (err) {
@@ -135,7 +162,7 @@ router.get("/userstory", async (req, res) => {
     let projectid = req.body.id;
     let rows;  
     let results = await dbRtns.getAllStories(projectid);
-    rows  = results.rows;
+    rows  = results?.rows;
     res.status(200).send({rows:rows});
       
   } catch (err) {
@@ -149,7 +176,7 @@ router.put("/userstory", async (req, res) => {
     let userstory = req.body.user_story_id;
     let completiondate = req.body.completion_date;
     let results = await dbRtns.updateUserStory(userstory, completiondate);
-    rows  = results.rows;
+    rows  = results?.rows;
     res.status(200).send({rows:rows});
       
   } catch (err) {
@@ -163,7 +190,7 @@ router.get("/userstory/:id", async (req, res) => {
     let row;  
     let id = req.params.id;
     let results = await dbRtns.getSelectedStory(id);
-    rows  = results.rows;
+    rows  = results?.rows;
     res.status(200).send({rows:row});
       
   } catch (err) {
@@ -171,7 +198,20 @@ router.get("/userstory/:id", async (req, res) => {
     res.status(500).send("getting story failed - internal server error");
   }
 });
-  
+
+router.get("/stories/:id", async (req, res) => {
+  try {
+    let rows;  
+    let id = req.params.id //sprint id.
+    let results = await dbRtns.getStoriesBySprint(id);
+    rows  = results?.rows;
+    res.status(200).send({rows:rows});
+      
+  } catch (err) {
+    console.log(err.stack);
+    res.status(500).send("getting subtask failed - internal server error");
+  }
+});
 
 router.post("/subtasks", async (req, res) =>{
   try {
