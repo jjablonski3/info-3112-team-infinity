@@ -8,13 +8,12 @@ router.post("/projectinformation", async (req, res) => {
     //define variables from cliet post fetch through body
       let teamname = req.body.teamname;
       let product = req.body.product;
-      let project_start_date = req.body.start_date;
+      let project_start_date = new Date().toISOString();
       let story_hours = req.body.story_hours;
       let estimated_storypoints = req.body.estimated_storypoints;
       let estimated_cost = req.body.estimated_cost;
       let results = await dbRtns.addProjectInformation(teamname, product, project_start_date, story_hours, estimated_storypoints, estimated_cost);
       res.status(200).send({results:results});
-      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("add project info failed - internal server error");
@@ -72,6 +71,23 @@ router.get("/teammembers", async (req, res) => {
   }
 });
 
+//
+router.get("/teammembersforproject/:id", async (req, res) => {
+  try{
+    let id = req.params.id
+    let rows;
+    let results = await dbRtns.getTeammembersForProject(id);
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get teammembersforproject data failed - internal server error");
+  }
+  
+});
+
+
 router.get("/sprint", async (req, res) =>{
   try{
     let rows;
@@ -121,7 +137,7 @@ router.post("/sprint", async(req, res) =>{
       let projectid = req.body.project_information_id;
       let is_initial_backlog_sprint = req.body.is_initial_backlog_sprint;
       let final_sprint = req.body.is_final_completion_sprint;
-      let sprint_begin_date = req.body.sprint_begin_date;
+      let sprint_begin_date = new Date().toISOString();
       let results = await dbRtns.addSprint(projectid, is_initial_backlog_sprint, final_sprint, sprint_begin_date);
       res.status(200).send({results:results});      
   } catch (err) {
@@ -136,9 +152,11 @@ router.post("/userstory", async (req, res) => {
       let initialcost = req.body.initialcost;
       let relativeestimate = req.body.relativeestimate;
       let statement = req.body.statement;
-      let results = await dbRtns.addStory(initialcost, relativeestimate, statement);
-      res.status(200).send({results:results});
       
+      //for transaction
+      let sprintid = req.body.sprintid
+      let results = await dbRtns.addStory(initialcost, relativeestimate, statement, sprintid);
+      res.status(200).send({results:results});
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("adding story failed - internal server error");
@@ -219,7 +237,9 @@ router.post("/subtasks", async (req, res) =>{
       let description = req.body.description;
       let user_story_id = req.body.user_story_id;
       let team_member_assigned = req.body.team_member_assigned;
-      let results = await dbRtns.addSubtask(description, user_story_id, team_member_assigned);
+      let hours_worked = req.body.hours_worked;
+      let hours_to_complete_estimate = req.body.hours_to_complete_estimate;
+      let results = await dbRtns.addSubtask(description, user_story_id, team_member_assigned, hours_worked, hours_to_complete_estimate);
       res.status(200).send({results:results});
       
   } catch (err) {

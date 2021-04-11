@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import clsx from "clsx";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { Button } from "@material-ui/core";
@@ -26,22 +26,23 @@ import ExpandLess from "@material-ui/icons/ExpandLess";
 import ExpandMore from "@material-ui/icons/ExpandMore";
 import theme from "../theme";
 import NewProjectModal from "./AddNewProjectModal";
-import Sprints from "./Sprints";
+import NewSprintModal from "./AddNewSprintModal";
 
 const drawerWidth = 240;
 
+const PersistentDrawerLeft = (props) => {
+    //destructure props
+    const { sendToMainDisplay, projDisplayMain } = props;
 
-
-export default function PersistentDrawerLeft() {
     const classes = useStyles();
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
     const [openModal, setOpenModal] = React.useState(false);
+    const [openSprintModal, setOpenSprintModal] = React.useState(false);
     const [projectsArr, setProjectsArr] = React.useState([]);
+    const [currentProjId, setCurrentProjId] = useState(-1);
     const [mode, setMode] = React.useState("Team Member");
     const [dropdownState, setDropdownState] = useState({});
-
-
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -57,26 +58,59 @@ export default function PersistentDrawerLeft() {
 
     const handleModalClose = () => {
         setOpenModal(false);
+        //refresh to show the new proj
+        fetchProjects();
+    };
+
+    const handleNewSprint = () => {
+        setOpenSprintModal(true);
+    };
+
+    const handleSprintModalClose = () => {
+        setOpenSprintModal(false);
+        //refresh to show the new sprint
+        fetchProjects();
     };
 
     const [anchorEl, setAnchorEl] = React.useState(null);
 
-    const handleClick = event => {
+    const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
 
-    const handleModeChange = ev => {
+    const handleModeChange = (ev) => {
         setMode(ev.target.innerText);
         setAnchorEl(null);
     };
 
-    const handleExpand = ev => {
+    const handleExpand = (ev, projdata) => {
         let currentId = ev.currentTarget.id;
-        if(dropdownState[currentId] != null){
-            setDropdownState({[currentId]: !dropdownState[currentId]});
+        //on click flip the dropdown state between open and closed
+        if (dropdownState[currentId] != null) {
+            setDropdownState({ [currentId]: !dropdownState[currentId] });
+        } else {
+            setDropdownState({ [currentId]: true });
         }
-        else{
-            setDropdownState({[currentId]: true});
+        //update proj id
+        if(currentProjId != currentId){
+            setCurrentProjId(currentId);
+            //update main display
+            let product_name = ev.currentTarget?.getAttribute("product_name");
+            let team_name = ev.currentTarget?.getAttribute("team_name");
+            let project_start_date = ev.currentTarget?.getAttribute("project_start_date");
+            let hours_per_storypoint = ev.currentTarget?.getAttribute("hours_per_storypoint");
+            let total_estimated_storypoints = ev.currentTarget?.getAttribute("total_estimated_storypoints");
+            let total_estimated_cost = ev.currentTarget?.getAttribute("total_estimated_cost");
+
+            projDisplayMain({
+                id: currentId,
+                productname: product_name,
+                teamname: team_name,
+                projectstartdate: project_start_date,
+                hoursperstorypoint: hours_per_storypoint,
+                totalestimatedstorypoints: total_estimated_storypoints,
+                totalestimatedcost: total_estimated_cost
+            });
         }
     };
 
@@ -88,15 +122,28 @@ export default function PersistentDrawerLeft() {
     //get the stories for the sprint parent (id passed through props)
     const fetchProjects = async () => {
         try {
-            let response = await fetch(`http://localhost:5000/api/projectinformationwithsprints`);
+            let response = await fetch(
+                `http://localhost:5000/api/projectinformationwithsprints`,
+                {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
             let json = await response.json();
-            console.log(json);
             setProjectsArr(json?.rows);
-            console.log('here');
         } catch (error) {
-            alert("failed to process the request: " + error.toString());
+            alert(
+                "failed to process the fetchProjects request: " +
+                    error.toString()
+            );
             console.log(error);
         }
+    };
+
+    const handleSprintListClick = (ev) => {
+        let clickedId = ev.currentTarget?.getAttribute("sprintid");
+        console.log(clickedId);
+        sendToMainDisplay(clickedId);
     };
 
     return (
@@ -105,7 +152,7 @@ export default function PersistentDrawerLeft() {
             <AppBar
                 position="fixed"
                 className={clsx(classes.appBar, {
-                    [classes.appBarShift]: open
+                    [classes.appBarShift]: open,
                 })}
             >
                 <Toolbar style={{ paddingRight: 0 }}>
@@ -141,7 +188,7 @@ export default function PersistentDrawerLeft() {
                             style={{
                                 position: "absolute",
                                 right: 50,
-                                textTransform: "capitalize"
+                                textTransform: "capitalize",
                             }}
                             noWrap
                         >
@@ -161,14 +208,14 @@ export default function PersistentDrawerLeft() {
                 anchor="left"
                 open={open}
                 classes={{
-                    paper: classes.drawerPaper
+                    paper: classes.drawerPaper,
                 }}
             >
                 <div className={classes.drawerHeader + " drawerHead"}>
                     <h4
                         style={{
                             display: "flex",
-                            justifyContent: "flex-start"
+                            justifyContent: "flex-start",
                         }}
                     >
                         Projects
@@ -183,83 +230,65 @@ export default function PersistentDrawerLeft() {
                 </div>
                 <Divider />
                 <List>
-                {projectsArr?.map((proj, keyIndex) => (
-                    <div key={keyIndex}>
-                        <ListItem 
-                            button
-                            id={proj.project_information_id}
-                            onClick={(ev) => handleExpand(ev)}
-                        >
-                            <ListItemIcon>
-                                <AccountTreeIcon />
-                            </ListItemIcon>
-                            <ListItemText primary={proj.product_name} />
-                            {dropdownState[proj.project_information_id] ? 
-                                (<ExpandMore />) : (<ChevronRightIcon />)
-                            }
-                        </ListItem>
-                        <Collapse
-                            component="li"
-                            in={dropdownState[proj.project_information_id]}
-                            timeout="auto"
-                            unmountOnExit
-                        >
-                            <List>
-                                <ListItem>
-
-                                    <ListItemText>test44</ListItemText>
-                                </ListItem>
-                                <ListItem>
-                                    <ListItemText>test78</ListItemText>
-                                </ListItem>
-
-                                {proj?.sprintsdata?.map((spr, innerKeyIndex) =>
-                                    <ListItem key={innerKeyIndex}>
-                                        <ListItemText>{spr.is_initial_backlog_sprint ? "Product Backlog" : `Sprint ${keyIndex}`}test333545</ListItemText>
-                                    </ListItem>
+                    {projectsArr?.map((proj, keyIndex) => (
+                        <div key={keyIndex}>
+                            <ListItem
+                                button
+                                id={proj.project_information_id}
+                                product_name={proj.product_name}
+                                team_name={proj.team_name}
+                                project_start_date={proj.project_start_date}
+                                hours_per_storypoint={proj.hours_per_storypoint}
+                                total_estimated_storypoints={proj.total_estimated_storypoints}
+                                total_estimated_cost={proj.total_estimated_cost}
+                                onClick={(ev) => handleExpand(ev)}
+                            >
+                                <ListItemIcon>
+                                    <AccountTreeIcon />
+                                </ListItemIcon>
+                                <ListItemText primary={proj.product_name} />
+                                {dropdownState[proj.project_information_id] ? (
+                                    <ExpandMore />
+                                ) : (
+                                    <ChevronRightIcon />
                                 )}
-                            </List>
-                        </Collapse>
-                    </div>
-                ))}
-
-                {/*
-
-                
-                    <ListItem 
-                        button
-                        id="1"
-                        onClick={(ev) => handleExpand(ev)}
-                    >
-                        <ListItemIcon>
-                            <AccountTreeIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Project 1" />
-                        {dropdownState['1'] ? 
-                            (<ExpandMore />) : (<ChevronRightIcon />)
-                        }
-                    </ListItem>
-                    <Collapse
-                        component="li"
-                        in={dropdownState['1']}
-                        timeout="auto"
-                        unmountOnExit
-                    >
-                        <List>
-                            <ListItem>
-                                <ListItemText primary="test123"/>
                             </ListItem>
-                        </List>
-                    </Collapse>
-                    */}
+                            <Collapse
+                                component="li"
+                                in={dropdownState[proj.project_information_id]}
+                                timeout="auto"
+                                unmountOnExit
+                            >
+                                <List>
+                                    {proj?.sprintsdata?.map(
+                                        (spr, innerKeyIndex) => (
+                                            <ListItem
+                                                key={innerKeyIndex}
+                                                onClick={handleSprintListClick}
+                                                sprintid={spr.sprint_id}
+                                            >
+                                                <ListItemText>
+                                                    {spr.is_initial_backlog_sprint
+                                                        ? "Product Backlog"
+                                                        : `Sprint ${spr.sprint_id}`}
+                                                </ListItemText>
+                                            </ListItem>
+                                        )
+                                    )}
+                                    <Divider />
+                                    <ListItem button onClick={handleNewSprint}>
+                                        <ListItemIcon>
+                                            <AddCircleIcon />
+                                        </ListItemIcon>
+                                        <ListItemText primary="Add Sprint" />
+                                    </ListItem>
+                                    <Divider />
+                                </List>
+                            </Collapse>
+                        </div>
+                    ))}
 
-
-                <Divider />
-
-
-
-
-
+                    <Divider />
                     <ListItem button onClick={handleNewProject}>
                         <ListItemIcon>
                             <AddCircleIcon />
@@ -284,40 +313,48 @@ export default function PersistentDrawerLeft() {
                 openModal={openModal}
                 closeModal={handleModalClose}
             />
+            {<NewSprintModal
+                openModal={openSprintModal}
+                closeModal={handleSprintModalClose}
+                projId={currentProjId}
+            />}
+            
         </div>
     );
-}
+};
 
-const useStyles = makeStyles(theme => ({
+export default PersistentDrawerLeft;
+
+const useStyles = makeStyles((theme) => ({
     root: {
-        display: "flex"
+        display: "flex",
     },
     appBar: {
         transition: theme.transitions.create(["margin", "width"], {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
-        })
+            duration: theme.transitions.duration.leavingScreen,
+        }),
     },
     appBarShift: {
         width: `calc(100% - ${drawerWidth}px)`,
         marginLeft: drawerWidth,
         transition: theme.transitions.create(["margin", "width"], {
             easing: theme.transitions.easing.easeOut,
-            duration: theme.transitions.duration.enteringScreen
-        })
+            duration: theme.transitions.duration.enteringScreen,
+        }),
     },
     menuButton: {
-        marginRight: theme.spacing(2)
+        marginRight: theme.spacing(2),
     },
     hide: {
-        display: "none"
+        display: "none",
     },
     drawer: {
         width: drawerWidth,
-        flexShrink: 0
+        flexShrink: 0,
     },
     drawerPaper: {
-        width: drawerWidth
+        width: drawerWidth,
     },
     drawerHeader: {
         display: "flex",
@@ -325,24 +362,24 @@ const useStyles = makeStyles(theme => ({
         padding: theme.spacing(0, 1),
         // necessary for content to be below app bar
         ...theme.mixins.toolbar,
-        justifyContent: "flex-end"
+        justifyContent: "flex-end",
     },
     content: {
         flexGrow: 1,
         padding: theme.spacing(3),
         transition: theme.transitions.create("margin", {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
+            duration: theme.transitions.duration.leavingScreen,
         }),
-        marginLeft: -drawerWidth
+        marginLeft: -drawerWidth,
     },
     contentShift: {
         transition: theme.transitions.create("margin", {
             easing: theme.transitions.easing.easeOut,
-            duration: theme.transitions.duration.enteringScreen
+            duration: theme.transitions.duration.enteringScreen,
         }),
-        marginLeft: 0
-    }
+        marginLeft: 0,
+    },
 }));
 
 /*import React from "react";

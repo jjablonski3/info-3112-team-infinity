@@ -19,7 +19,7 @@ const addProjectInformation = async (team, product, date, storyhours, estimatede
         text: `INSERT INTO project_information 
                             ( team_name, product_name, project_start_date, hours_per_storypoint, total_estimated_storypoints, total_estimated_cost)
                 VALUES 
-                    ( '${team}', '${product}', ${date}, ${storyhours}, ${estimatedestorypoints}, ${esimatedcost}  )`
+                    ( '${team}', '${product}', '${date}', ${storyhours}, ${estimatedestorypoints}, ${esimatedcost}  )`
     }
     try{
         let results = await pool.query(query);
@@ -43,31 +43,22 @@ const getProjectInformation = async () => {
     }
 };
 
-/*
-        (
-            SELECT row_to_json(sprintRecord) FROM
-            (
-                SELECT spr.sprint_id
-                FROM project_information pi
-                WHERE pi.project_information_id = spr.project_information_id
-            ) sprintRecord
-        ) AS ProjSprints,
-*/
 
 const getProjectInformationWithSprints = async () => {
     const query = {
         text: `
-        SELECT pi.project_information_id, pi.product_name,
-        coalesce(
-            (
-                SELECT array_to_json(array_agg(row_to_json(sprintRecords)))
-                FROM (
-                    SELECT spr.sprint_id, spr.is_initial_backlog_sprint, spr.is_final_completion_sprint, spr.sprint_begin_date, spr.sprint_end_date
-                    FROM sprint spr
-                    WHERE pi.project_information_id = spr.project_information_id
-                )sprintRecords
-            ),
-            '[]'
+        SELECT pi.project_information_id, pi.product_name, pi.team_name, pi.project_start_date, 
+            pi.hours_per_storypoint, pi.total_estimated_storypoints, pi.total_estimated_cost,
+            coalesce(
+                (
+                    SELECT array_to_json(array_agg(row_to_json(sprintRecords)))
+                    FROM (
+                        SELECT spr.sprint_id, spr.is_initial_backlog_sprint, spr.is_final_completion_sprint, spr.sprint_begin_date, spr.sprint_end_date
+                        FROM sprint spr
+                        WHERE pi.project_information_id = spr.project_information_id
+                    )sprintRecords
+                ),
+                '[]'
         ) AS sprintsData
         FROM project_information pi
         `
@@ -99,6 +90,31 @@ const getTeamMembers = async () => {
     const query = {
         text: `SELECT * FROM team_member`
     }
+    try{
+        let results = await pool.query(query);
+        return results;
+
+    }catch (err) {
+        console.log(err);
+    }
+};
+
+const getTeammembersForProject = async(projectid) =>{
+    const query = {
+        text: `SELECT DISTINCT team_member_id, first_name, last_name
+        FROM team_member tm
+        INNER JOIN subtask st
+        ON st.team_member_assigned = tm.team_member_id
+        INNER JOIN user_story us
+        ON us.user_story_id = st.user_story_id
+        INNER JOIN sprint_user_story_instance susi
+        ON susi.user_story_id = us.user_story_id
+        INNER JOIN sprint spr
+        ON spr.sprint_id = susi.sprint_id
+        INNER JOIN project_information pi
+        ON pi.project_information_id = spr.project_information_id
+        WHERE pi.project_information_id = ${projectid};`
+    };
     try{
         let results = await pool.query(query);
         return results;
@@ -153,8 +169,8 @@ const getSprintsByProjId = async(projectid) =>{
 
 const addSprint = async(projectid, isBacklog, isFinalSprint, beginDate) =>{
     const query = {
-        text: `INSERT INTO sprint (project_information_id, is_initial_backlog, is_final_completion_sprint, sprint_begin_date) 
-        VALUES (${projectid}, ${isBacklog}, ${isFinalSprint}, ${beginDate}) `
+        text: `INSERT INTO sprint (project_information_id, is_initial_backlog_sprint, is_final_completion_sprint, sprint_begin_date) 
+        VALUES (${projectid}, ${isBacklog}, ${isFinalSprint}, '${beginDate}') `
     };
     try{
         let results = await pool.query(query);
@@ -165,17 +181,50 @@ const addSprint = async(projectid, isBacklog, isFinalSprint, beginDate) =>{
     }
 };
 
-const addStory = async (initialcost, relativeestimate, statement) =>{
-    const query = {
+const addStory = async (initialcost, relativeestimate, statement, sprintid) =>{
+    //POST to story table
+    const queryA = {
         text: `INSERT INTO user_story ( initial_estimated_cost, initial_relative_estimate, i_want_to_statement )
-         VALUES ( ${initialcost}, ${relativeestimate}, '${statement}' )`
+         VALUES ( ${initialcost}, ${relativeestimate}, '${statement}' )
+         RETURNING user_story_id;`
     };
+    console.log('beforeStoryId')
+    const tempclient = await pool.connect()
     try{
-        let results = await pool.query(query);
-        return results;
+        console.log('beforeStoryId3');
+        //begin transaction
+        await tempclient.query('BEGIN');
+        console.log('beforeStoryId4');
+        console.log(queryA);
+        const resA = await tempclient.query(queryA);
+        console.log('beforeStoryId')
+        console.log(resA);
+        console.log(resA.rows);
+        let storyid = resA.rows[0].user_story_id;
+        /*
+        console.log(storyid);
+        */
+        //check if we did get the id
+        if(!storyid){
+            throw new Error('transaction failed');
+        }
 
+        //then post newly created story to junction table
+        const queryB ={
+            text: `INSERT INTO sprint_user_story_instance(sprint_id, user_story_id)
+                    VALUES (${sprintid}, ${storyid})`
+        };
+        //run the next insert
+        const resultsB = await tempclient.query(queryB);
+        //commit if both succeeded
+        await tempclient.query('COMMIT');
+        return resultsB;
     }catch (err) {
+        await tempclient.query('ROLLBACK'); 
         console.log(err);
+    }
+    finally {
+        tempclient.release();
     }
 };
 
@@ -251,11 +300,12 @@ const getStoriesBySprint = async(sprintid) =>{
     }
 };
 
-const addSubtask = async (description, user_story_id, team_member_assigned)=> {
+const addSubtask = async (description, user_story_id, team_member_assigned, hours_worked, hours_to_complete_estimate)=> {
     const query = {
-        text:`INSERT INTO subtask ( description, user_story_id, team_member_assigned )
-               VALUES ${description}, ${user_story_id} ${team_member_assigned}`
+        text:`INSERT INTO subtask ( description, user_story_id, team_member_assigned, hours_worked, hours_to_complete_estimate )
+               VALUES ('${description}', ${user_story_id}, ${team_member_assigned}, ${hours_worked}, ${hours_to_complete_estimate})`
     };
+    console.log(query);
     try{
         let results = await pool.query(query);
         return results;
@@ -302,7 +352,7 @@ const updateSubtask = async (subtaskid, hours_worked, estimate) =>{
 module.exports= { 
         getProjectInformation, 
         addProjectInformation, 
-        getTeamMembers, 
+        getTeamMembers,
         addTeamMembers,
         getAllStories,
         addStory,
@@ -317,6 +367,7 @@ module.exports= {
         addSprintStoryInstance,
         getStoriesBySprint,
         getSprintsByProjId,
-        getProjectInformationWithSprints
+        getProjectInformationWithSprints,
+        getTeammembersForProject
 }
 

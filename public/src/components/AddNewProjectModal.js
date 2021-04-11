@@ -92,7 +92,6 @@ const PopupModal = props => {
                 setTotalEstCost(parseFloat(ev.target.value));
                 break;
         }
-        //console.log(teamName);
     };
 
     const addNewProject = async () => {
@@ -114,12 +113,17 @@ const PopupModal = props => {
                 }
             );
 
-            const output = await response.json();
-            alert(`Inserted ${output.results.rowCount} Project Successfully!`);
+            const output = await response.json(); 
+            if(output?.results?.rowCount > 0){
+                alert(`Inserted ${output?.results?.rowCount} Project Successfully!`);
+            }
+            else{
+                alert(`Insert project failed`);
+            }
             handleClearForm();
             props.closeModal();
         } catch (err) {
-            alert("failed to process the request: " + err.toString());
+            alert("failed to process the addNewProject request: " + err.toString());
             console.log(err);
         }
     };
