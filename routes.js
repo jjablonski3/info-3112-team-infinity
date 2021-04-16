@@ -1,25 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const dbRtns = require("./dbroutines");
-const Report = require("fluentreports").Report;
+const Report = require('fluentreports').Report;
+
 router.post("/projectinformation", async (req, res) => {
   try {
     //define variables from cliet post fetch through body
-    let teamname = req.body.teamname;
-    let product = req.body.product;
-    let project_start_date = req.body.start_date;
-    let story_hours = req.body.story_hours;
-    let estimated_storypoints = req.body.estimated_storypoints;
-    let estimated_cost = req.body.estimated_cost;
-    let results = await dbRtns.addProjectInformation(
-      teamname,
-      product,
-      project_start_date,
-      story_hours,
-      estimated_storypoints,
-      estimated_cost
-    );
-    res.status(200).send({ results: results });
+      let teamname = req.body.teamname;
+      let product = req.body.product;
+      let project_start_date = new Date().toISOString();
+      let story_hours = req.body.story_hours;
+      let estimated_storypoints = req.body.estimated_storypoints;
+      let estimated_cost = req.body.estimated_cost;
+      let results = await dbRtns.addProjectInformation(teamname, product, project_start_date, story_hours, estimated_storypoints, estimated_cost);
+      res.status(200).send({results:results});
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("add project info failed - internal server error");
@@ -28,10 +22,22 @@ router.post("/projectinformation", async (req, res) => {
 
 router.get("/projectinformation", async (req, res) => {
   try {
-    let rows;
+    let rows;  
     let results = await dbRtns.getProjectInformation();
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+  } catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get project info failed - internal server error");
+  }
+});
+
+router.get("/projectinformationwithsprints", async (req, res) => {
+  try {
+    let rows;  
+    let results = await dbRtns.getProjectInformationWithSprints();
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("get project info failed - internal server error");
@@ -44,64 +50,96 @@ router.post("/teammembers", async (req, res) => {
     let firstname = req.body.firstname;
     let lastname = req.body.lastname;
     let results = await dbRtns.addTeamMembers(firstname, lastname);
-    res.status(200).send({ results: results });
+    res.status(200).send({results:results});
+        
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("add team member failed - internal server error");
   }
 });
-
+  
 router.get("/teammembers", async (req, res) => {
   try {
-    let rows;
+    let rows;  
     let results = await dbRtns.getTeamMembers();
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
+    rows  = results?.rows;
+    res.status(200).send({rows:rows});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("get all team members failed - internal server error");
   }
 });
 
-router.get("/sprint", async (req, res) => {
-  try {
+//
+router.get("/teammembersforproject/:id", async (req, res) => {
+  try{
+    let id = req.params.id
+    let rows;
+    let results = await dbRtns.getTeammembersForProject(id);
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get teammembersforproject data failed - internal server error");
+  }
+  
+});
+
+
+router.get("/sprint", async (req, res) =>{
+  try{
     let rows;
     let results = await dbRtns.getAllSprints();
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
-  } catch (err) {
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
     console.log(err.stack);
     res.status(500).send("get sprint data failed - internal server error");
   }
 });
 
-router.get("sprint/:id", async (req, res) => {
-  try {
-    let id = req.body.id;
+router.get("/sprint/:id", async (req, res) => {
+  try{
+    let id = req.params.id
     let rows;
     let results = await dbRtns.getSprintById(id);
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
-  } catch (err) {
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
     console.log(err.stack);
     res.status(500).send("get sprint data failed - internal server error");
   }
+  
 });
 
-router.post("/sprint", async (req, res) => {
+router.get("/sprints/:id", async (req, res) => {
+  try{
+    let id = req.params.id
+    let rows;
+    let results = await dbRtns.getSprintsByProjId(id);
+    rows = results?.rows;
+    res.status(200).send({rows:rows});
+
+  }catch (err) {
+    console.log(err.stack);
+    res.status(500).send("get sprint data failed - internal server error");
+  }
+  
+});
+
+router.post("/sprint", async(req, res) =>{
   try {
     //define variables from cliet post fetch through body
-    let projectid = req.body.project_information_id;
-    let is_initial_backlog_sprint = req.body.is_initial_backlog_sprint;
-    let final_sprint = req.body.is_final_completion_sprint;
-    let sprint_begin_date = req.body.sprint_begin_date;
-    let results = await dbRtns.addSprint(
-      projectid,
-      is_initial_backlog_sprint,
-      final_sprint,
-      sprint_begin_date
-    );
-    res.status(200).send({ results: results });
+      let projectid = req.body.project_information_id;
+      let is_initial_backlog_sprint = req.body.is_initial_backlog_sprint;
+      let final_sprint = req.body.is_final_completion_sprint;
+      let sprint_begin_date = new Date().toISOString();
+      let results = await dbRtns.addSprint(projectid, is_initial_backlog_sprint, final_sprint, sprint_begin_date);
+      res.status(200).send({results:results});      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("adding sprint failed - internal server error");
@@ -111,42 +149,40 @@ router.post("/sprint", async (req, res) => {
 router.post("/userstory", async (req, res) => {
   try {
     //define variables from cliet post fetch through body
-    let initialcost = req.body.initialcost;
-    let relativeestimate = req.body.relativeestimate;
-    let statement = req.body.statement;
-    let results = await dbRtns.addStory(
-      initialcost,
-      relativeestimate,
-      statement
-    );
-    res.status(200).send({ results: results });
+      let initialcost = req.body.initialcost;
+      let relativeestimate = req.body.relativeestimate;
+      let statement = req.body.statement;
+      
+      //for transaction
+      let sprintid = req.body.sprintid
+      let results = await dbRtns.addStory(initialcost, relativeestimate, statement, sprintid);
+      res.status(200).send({results:results});
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("adding story failed - internal server error");
   }
 });
 
-router.post("/sprint_story_instance", async (req, res) => {
-  try {
+router.post("/sprint_story_instance", async(req, res)=>{
+  try{
     let sprint_id = req.body.sprint_id;
     let story_id = req.body.story_id;
     let results = await dbRtns.addSprintStoryInstance(sprint_id, story_id);
-    res.status(200).send({ results: results });
-  } catch (err) {
+    res.status(200).send({results:results});
+  }catch(err){
     console.log(err.stack);
-    res
-      .status(500)
-      .send("adding sprint-story instance failed - internal server error");
+    res.status(500).send("adding sprint-story instance failed - internal server error");
   }
 });
 
 router.get("/userstory", async (req, res) => {
   try {
     let projectid = req.body.id;
-    let rows;
+    let rows;  
     let results = await dbRtns.getAllStories(projectid);
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
+    rows  = results?.rows;
+    res.status(200).send({rows:rows});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("get all stories failed - internal server error");
@@ -158,8 +194,9 @@ router.put("/userstory", async (req, res) => {
     let userstory = req.body.user_story_id;
     let completiondate = req.body.completion_date;
     let results = await dbRtns.updateUserStory(userstory, completiondate);
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
+    rows  = results?.rows;
+    res.status(200).send({rows:rows});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("adding story failed - internal server error");
@@ -168,29 +205,43 @@ router.put("/userstory", async (req, res) => {
 
 router.get("/userstory/:id", async (req, res) => {
   try {
-    let row;
+    let row;  
     let id = req.params.id;
     let results = await dbRtns.getSelectedStory(id);
-    rows = results.rows;
-    res.status(200).send({ rows: row });
+    rows  = results?.rows;
+    res.status(200).send({rows:row});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("getting story failed - internal server error");
   }
 });
 
-router.post("/subtasks", async (req, res) => {
+router.get("/stories/:id", async (req, res) => {
+  try {
+    let rows;  
+    let id = req.params.id //sprint id.
+    let results = await dbRtns.getStoriesBySprint(id);
+    rows  = results?.rows;
+    res.status(200).send({rows:rows});
+      
+  } catch (err) {
+    console.log(err.stack);
+    res.status(500).send("getting subtask failed - internal server error");
+  }
+});
+
+router.post("/subtasks", async (req, res) =>{
   try {
     //define variables from cliet post fetch through body
-    let description = req.body.description;
-    let user_story_id = req.body.user_story_id;
-    let team_member_assigned = req.body.team_member_assigned;
-    let results = await dbRtns.addSubtask(
-      description,
-      user_story_id,
-      team_member_assigned
-    );
-    res.status(200).send({ results: results });
+      let description = req.body.description;
+      let user_story_id = req.body.user_story_id;
+      let team_member_assigned = req.body.team_member_assigned;
+      let hours_worked = req.body.hours_worked;
+      let hours_to_complete_estimate = req.body.hours_to_complete_estimate;
+      let results = await dbRtns.addSubtask(description, user_story_id, team_member_assigned, hours_worked, hours_to_complete_estimate);
+      res.status(200).send({results:results});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("adding subtask failed - internal server error");
@@ -199,11 +250,12 @@ router.post("/subtasks", async (req, res) => {
 
 router.get("/subtasks/:id", async (req, res) => {
   try {
-    let rows;
-    let id = req.params.id; //story id.
+    let rows;  
+    let id = req.params.id //story id.
     let results = await dbRtns.getSubtasksForStory(id);
-    rows = results.rows;
-    res.status(200).send({ rows: rows });
+    rows  = results.rows;
+    res.status(200).send({rows:rows});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("getting subtask failed - internal server error");
@@ -212,16 +264,21 @@ router.get("/subtasks/:id", async (req, res) => {
 
 router.put("/subtasks/:id", async (req, res) => {
   try {
-    let id = req.params.id; //subtask id.
+
+    let id = req.params.id //subtask id.
     let hours_worked = req.params.hours_worked;
     let estimate = req.params.hours_to_complete_estimate;
     let results = await dbRtns.updateSubtask(id, hours_worked, estimate);
-    res.status(200).send({ results: results });
+    res.status(200).send({results:results});
+      
   } catch (err) {
     console.log(err.stack);
     res.status(500).send("updating subtask failed - internal server error");
   }
 });
+
+
+
 
 router.get("/sprintsummary/:projectid", async (req, res) => {
   res.set("Content-Type", "application/pdf");
@@ -408,5 +465,22 @@ router.get("/sprintsummary/:projectid", async (req, res) => {
     res.status(500).send("get sprint summary failed - internal server error");
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 module.exports = router;
