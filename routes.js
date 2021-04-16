@@ -280,28 +280,40 @@ router.put("/subtasks/:id", async (req, res) => {
 
 
 
-router.get("/sprintsummary", async(req, res)=>{
-  res.set('Content-Type', 'application/pdf');
-  try{
+router.get("/sprintsummary/:projectid", async (req, res) => {
+  res.set("Content-Type", "application/pdf");
+  try {
     //need objects for pdf summary
     //get all stories from sprint
     //get all subtask data and map to story array.
-
-    let sprintresults = (await dbRtns.getStoriesBySprint(9000)).rows;
-    let storyobjects = [];
-    await Promise.all(sprintresults.map(async (story) =>{
-      let data = await dbRtns.getSubtasksForStory(story.user_story_id);
-      storyobjects.push({
-        story: {story: story.i_want_to_statement, points: story.intial_estimated_cost, hours: story.intial_relative_estimate},
-        subtasks: data.rows
-      });
-    }));
+    let projectid = req.params.projectid; //subtask id.
+    let id = (await dbRtns.getCurrentSprint(projectid)).rows[0].sprint_id;
     
+    let sprintresults = (await dbRtns.getStoriesBySprint(id)).rows;
+    let sprintcount = (await dbRtns.getSprintNumber(projectid)).rows[0].count;
+    console.log(sprintcount);
+    let storyobjects = [];
+    await Promise.all(
+      sprintresults.map(async (story) => {
+        let data = await dbRtns.getSubtasksForStory(story.user_story_id);
+        storyobjects.push({
+          story: {
+            story: story.i_want_to_statement,
+            points: story.initial_estimated_cost,
+            hours: story.initial_relative_estimate
+          },
+          subtasks: data.rows,
+        });
+      })
+    );
 
-  let totalworked = 0;
-  let totalremain = 0;
-  let totalStoryPoints = 0;
-  let totalEstimate = 0;
+    let projectinfo = (await dbRtns.getProjectInformation()).rows[7];
+    let totalworked = 0;
+    let totalremain = 0;
+    let totalStoryPoints = 0;
+    let totalEstimate = 0;
+
+
     const details = function (x, r) {
       x.newline();
 
@@ -309,76 +321,149 @@ router.get("/sprintsummary", async(req, res)=>{
       let subtaskarray = [];
       subtaskarray = r.subtasks;
       let storydata = [];
-      storydata= r.story;
+      storydata = r.story;
       totalStoryPoints += parseInt(storydata.points);
       totalEstimate += parseFloat(storydata.hours);
-      x.band([
-        {data: storydata.story, width:200},
-        {data: storydata.points, width:60, align: 2},
-        {data: storydata.hours, width:100, align: 2}
-      ], { fontBold:true})
-      for(const subtask of subtaskarray){
-        x.band([
-          {data: subtask.description, width: 320},
-          {data: subtask.hours_worked, width: 100, align: 2},
-          {data: subtask.hours_to_complete_estimate, width: 120, align: 2},
-          {data: subtask.name, width: 100, align: 1, fontBold:true}
-          
-      ], {x: 30, border:1});
-      totalworked += parseFloat(subtask.hours_worked);
-      totalremain += parseFloat(subtask.hours_to_complete_estimate);
+      x.print(storydata.story, {fontBold:true, fontSize:10});
+      x.print("", {width: 350});
+
+      // x.band(
+      //   [
+      //     { data: storydata.points, width: 250, align: 3 },
+      //     { data: storydata.hours, width: 100, align: 2 },
+      //   ],         { fontBold: true }
+      // )
+      let subtaskActual = 0;
+      let subtaskEstimateRemain = 0;
+      for (const subtask of subtaskarray) {
+        subtaskActual += parseFloat(subtask.hours_worked);
+        subtaskEstimateRemain += parseFloat(subtask.hours_to_complete_estimate);
+        x.band(
+          [
+            { data: subtask.description, width: 320 , align: 3},
+            { data: subtask.name, width: 100, align: 2, fontBold: true },
+            { data: "", width: 50, align: 2 },
+            { data: subtask.hours_worked, width: 70, align: 2 },
+            { data: subtask.hours_to_complete_estimate, width: 60, align: 2 },
+          ],
+          { x: 30, border: 1 }
+        );
+        totalworked += parseFloat(subtask.hours_worked);
+        totalremain += parseFloat(subtask.hours_to_complete_estimate);
+      }
+      x.newline();
+      x.print("Original Hours Estimate: " + storydata.hours, {fontSize: 11, fontBold:true, align:"right", width:475})
+      let percentComplete = 0;
+      if(totalremain === 0)
+      {
+        percentComplete = '100%'
+      }
+      else
+      {
+        percentComplete = (totalremain / (totalworked + totalremain)) *100;
+      }
+      x.band(
+        [
+          { data: "Subtask Totals", width: 350 , align: "right"},
+          { data: "", width: 100},
+          { data: percentComplete, width: 50, align: "center" },
+          { data: subtaskActual, width: 65, align: "center" },
+          { data: subtaskEstimateRemain, width: 70, align: "center" },
+        ],
+        { fontBold: true }
+      );
+      x.newline();
     };
-  };
-  const detailsFooter = function (x) {
-    x.fontSize(10);
-    x.newline();
+    const detailsFooter = function (x) {
+      let percentComplete = '100%';
+      x.fontSize(12);
+      x.newline();
+      x.band([
+        { data: "", width: 150 },
+        { data: "Percent Complete", width: 100, align:"center"},
+        { data: "Hours Estimate", width: 100, align:"center" },
+        { data: "Actual Hours Worked", width: 120, align:"center" },
+        { data: "Estimate to Complete", width: 120, align:"center" },
+      ]);
+      x.band(
+        [
+          { data: "Sprint Totals", width: 150, align:"right" },
+          { data: percentComplete, width: 100, align:"center"},
+          { data: totalEstimate, width: 100, align:"center" },
+          { data: totalworked, width: 120, align:"center" },
+          { data: totalremain, width: 120, align:"center" },
+        ],
+        { fontBold: true }
+      );
+    };
 
-    x.band([
-      {data: "Total", width: 175},
-      {data: totalStoryPoints, width: 60},
-      {data: totalEstimate, width: 80},
-      {data: totalworked , width: 90},
-      {data: totalremain, width: 110},
+    const detailsHeader = function (x) {
+      x.fontSize(10);
+      x.band([
+        { data: "Story/Subtasks", width: 350 },
+        { data: "Team Member", width: 95, align:"center" },
+        { data: "| Percent", width: 50, align:"center" },
+        { data: "| Actual Hours |", width: 75, align:"center" },
+        { data: "Estimate to | ", width: 110 },
+      ]);
+      x.band([
+        { data:"", width: 450 },
+        { data: "Complete", width: 50, align:"center" },
+        { data: "Worked", width: 70, align:"center" },
+        { data: "Complete", width: 55,  align:"center" },
+      ]);
+    };
+
+    const reportHeader = function (x) {
       
-    ], {fontBold:true})
-  };
+      let formatteddate = (projectinfo.project_start_date).toString();
+      formatteddate = formatteddate.slice(0,15);
+      x.fontSize(10);
+      x.print('Team Infinity', {x: 50, y:60, fontSize:28});
+      x.print(`Sprint #3 Report`, {x: 50, fontSize:24});
+      x.band([{data:`Project name:`, width:120},
+              {data: `${projectinfo.product_name}`, width:120}],
+              {x:400, y: 60});
+      x.band([{data:`Project Start Date: `, width:120},
+              {data:`${formatteddate}`, width:120}],
+              {x:400});
 
-  const detailsHeader = function(x) {
-    x.fontSize(10);
-    x.band([
-      {data: "Story/Subtasks", width: 200},
-      {data: "Story Points  | ", width: 70},
-      {data: "Hours Estimate  | ", width: 80},
-      {data: "Actual Hours Worked  |" , width: 110},
-      {data: "Estimate to Complete  | ", width: 110},
-      {data: "Team Member", width: 100},
-    ])
-  };
+      x.band([{data:`Story Point Conversion: `, width:120},
+              {data:`${projectinfo.hours_per_storypoint}`, width:120, align:"left"}],
+              {x:400});
+      
+      x.band([{data:`Project Story Points: `, width:120},
+            {data: `${projectinfo.total_estimated_storypoints}`, width:120, align:"left"}],
+            {x:400});
+      x.band([{data:`Cost Estimate: `, width: 120},
+            {data: `${projectinfo.total_estimated_cost}`, width:120, align:"left"}],
+            {x:400});
+      x.newline();
+
+    };
+
+
+
     //const report = new Report(pipeStream).data(storyobjects);
-    const report = new Report(res, {landscape:true})
-          .data(storyobjects)
-          .groupBy("no")
-          .header(detailsHeader)
-          .detail(details)
-          .footer(detailsFooter)
-          .render(function() {res.send();});
-        
-    
-    
-    
-    
-    
+    const report = new Report(res, { landscape: true})
+      .data(storyobjects)
+      .groupBy("no")
+      .header(reportHeader)
+      .groupBy("no")
+      .header(detailsHeader)
+      .detail(details)
+      .footer(detailsFooter)
+      .render(function () {
+        res.send();
+      });
 
     //res.send(report);
 
-
-
     //res.status(200).send({data:storyobjects});
-  }catch (err) {
+  } catch (err) {
     console.log(err.stack);
     res.status(500).send("get sprint summary failed - internal server error");
   }
-  
 });
 
 

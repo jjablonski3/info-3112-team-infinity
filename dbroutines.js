@@ -347,7 +347,33 @@ const updateSubtask = async (subtaskid, hours_worked, estimate) =>{
         console.log(err);
     }
 };
+const getCurrentSprint = async(projectid) =>
+{
+    const query = {
+        text: `SELECT sprint_id from sprint where project_information_id = ${projectid} and sprint_end_date < current_date `
+    };
+    try{
+        let results = await pool.query(query);
+        return results;
 
+    }catch (err) {
+        console.log(err);
+    }
+}
+
+const getSprintNumber = async(projectid) =>
+{
+    const query = {
+        text: `SELECT count(*) from sprint where project_information_id = ${projectid} and sprint_end_date < current_date  `
+    };
+    try{
+        let results = await pool.query(query);
+        return results;
+
+    }catch (err) {
+        console.log(err);
+    }
+}
 
 module.exports= { 
         getProjectInformation, 
