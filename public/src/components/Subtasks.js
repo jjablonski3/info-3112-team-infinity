@@ -81,8 +81,6 @@ const Subtasks = ({ props }) => {
           );
           let json = await response.json();
           setTeammembersArr(json?.rows);
-          console.log('mems');
-          console.log(json);
       } catch (error) {
           alert(
               "failed to process the fetchTeamMembers request: " +
