@@ -14,6 +14,7 @@ function App() {
     const classes = useStyles();
     const [currentDisplaySprint, setCurrentDisplaySprint] = useState(-1);
     const [currentDisplayProj, setCurrentDisplayProj] = useState(-1);
+    const [mode, setMode] = useState(false);
 
     const PopulateMainDisplay = (sprintData) => {
         console.log("dashboard-populatedisplayfunc-sprintdata" + sprintData);
@@ -39,6 +40,7 @@ function App() {
         }
     };
 
+
     const greeting = `
     Welcome to SprintCompass!
     Choose an option from the sidebar
@@ -53,6 +55,7 @@ function App() {
                     <PersistentDrawerLeft
                         sendToMainDisplay={PopulateMainDisplay}
                         projDisplayMain={ProjectOnMainDisplay}
+                        userMode={setMode}
                     />
                     <div className="headSeparator" />
                     <Paper
@@ -82,11 +85,14 @@ function App() {
                                                 <Stories
                                                     parentsprint={currentDisplaySprint}
                                                     parentproj={currentDisplayProj}
+                                                    user={mode}
                                                 ></Stories>
                                             )}
+
                                         </Box>
                                     )}
                                 </Box>
+
                             </div>
                         )}
                     </Paper>

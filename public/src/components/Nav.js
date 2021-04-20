@@ -32,7 +32,7 @@ const drawerWidth = 240;
 
 const PersistentDrawerLeft = (props) => {
     //destructure props
-    const { sendToMainDisplay, projDisplayMain } = props;
+    const { sendToMainDisplay, projDisplayMain, userMode } = props;
 
     const classes = useStyles();
     const theme = useTheme();
@@ -111,13 +111,18 @@ const PersistentDrawerLeft = (props) => {
                 totalestimatedstorypoints: total_estimated_storypoints,
                 totalestimatedcost: total_estimated_cost
             });
+
         }
     };
 
     useEffect(() => {
         fetchProjects();
         console.log(projectsArr);
-    }, []);
+        if(mode === "Team Member")
+            userMode(true);
+        else
+            userMode(false);
+    },[mode]);
 
     //get the stories for the sprint parent (id passed through props)
     const fetchProjects = async () => {
@@ -144,6 +149,7 @@ const PersistentDrawerLeft = (props) => {
         let clickedId = ev.currentTarget?.getAttribute("sprintid");
         console.log(clickedId);
         sendToMainDisplay(clickedId);
+
     };
 
     return (

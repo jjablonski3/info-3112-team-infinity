@@ -25,13 +25,15 @@ const Stories = (props) => {
   const [iWantToStatement, setIWantToStatement] = useState("");
   const [initEstCost, setInitEstimatedCost] = useState(0.0);
   const [initRelativeEst, setInitRelativeEst] = useState(0.0);
+  const [mode, setMode] = useState(false);
   
 
   //load the stories on mount
   useEffect(() => {
     console.log('inStoriesComponent000');
-    console.log(props?.parentsprint);
     fetchStories();
+    setMode(props?.user);
+
   }, [props]);
 
   //get the stories for the sprint parent (id passed through props)
@@ -88,7 +90,9 @@ const handleClearForm = ev => {
   setInitRelativeEst(0);
 };
 
-
+const generateSprintReport = () =>{
+  window.open(`http://localhost:5000/api/sprintsummary/${props?.parentproj.projid}`);
+}
 const addNewStory = async () => {
   const data = {
     statement: iWantToStatement,
@@ -124,6 +128,14 @@ const addNewStory = async () => {
 
   return (
     <div>
+      <Button 
+        color="secondary"
+        variant="contained"
+        disabled={mode}
+        onClick={generateSprintReport}
+        >
+        Generate Last Sprint Report
+      </Button>
         {storiesArr?.map((story, keyIndex) => (
           <div key={keyIndex}>
             <br/>
@@ -179,6 +191,7 @@ const addNewStory = async () => {
             <Subtasks props={{storyId: currentStory.user_story_id, projId: props?.parentproj?.projid}}></Subtasks>
           </Dialog>
         }
+
     </div>
   );
 };

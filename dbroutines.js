@@ -394,6 +394,8 @@ module.exports= {
         getStoriesBySprint,
         getSprintsByProjId,
         getProjectInformationWithSprints,
-        getTeammembersForProject
+        getTeammembersForProject,
+        getSprintNumber,
+        getCurrentSprint
 }
 
