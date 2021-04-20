@@ -25,6 +25,10 @@ import { StarBorder } from "@material-ui/icons";
 import ExpandLess from "@material-ui/icons/ExpandLess";
 import ExpandMore from "@material-ui/icons/ExpandMore";
 import theme from "../theme";
+import Dialog from "@material-ui/core/Dialog";
+import MuiDialogTitle from "@material-ui/core/DialogTitle";
+import MuiDialogContent from "@material-ui/core/DialogContent";
+import MuiDialogActions from "@material-ui/core/DialogActions";
 import NewProjectModal from "./AddNewProjectModal";
 import NewSprintModal from "./AddNewSprintModal";
 
@@ -43,6 +47,8 @@ const PersistentDrawerLeft = (props) => {
     const [currentProjId, setCurrentProjId] = useState(-1);
     const [mode, setMode] = React.useState("Team Member");
     const [dropdownState, setDropdownState] = useState({});
+    const [currentTeamMembers, setCurrentTeamMembers] = React.useState([]);
+    const [displayTeammembers, setDisplayTeammembers] = React.useState(false);
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -116,7 +122,6 @@ const PersistentDrawerLeft = (props) => {
 
     useEffect(() => {
         fetchProjects();
-        console.log(projectsArr);
     }, []);
 
     //get the stories for the sprint parent (id passed through props)
@@ -140,11 +145,38 @@ const PersistentDrawerLeft = (props) => {
         }
     };
 
+    const fetchTeamMembersForProject = async () => {
+        try {
+            let response = await fetch(
+                `http://localhost:5000/api/teammembersforproject/${currentProjId}`
+            );
+            let json = await response.json();
+            setCurrentTeamMembers(json?.rows);
+            console.log(json?.rows);
+        } catch (error) {
+            alert(
+                "failed to process the fetchTeamMembers request: " +
+                    error.toString()
+            );
+            console.log(error);
+        }
+    };
+
     const handleSprintListClick = (ev) => {
         let clickedId = ev.currentTarget?.getAttribute("sprintid");
         console.log(clickedId);
         sendToMainDisplay(clickedId);
     };
+
+    const handleShowTeammembers = async () => {
+        fetchTeamMembersForProject();
+        if(!displayTeammembers)
+        {
+            setDisplayTeammembers(true);
+        }
+        
+    };
+    
 
     return (
         <div className={classes.root}>
@@ -260,6 +292,26 @@ const PersistentDrawerLeft = (props) => {
                                 unmountOnExit
                             >
                                 <List>
+                                    <ListItem style={{backgroundColor: '#6B6'}} onClick={handleShowTeammembers}>
+                                        <ListItemText>Team Members</ListItemText>
+                                        {<Dialog
+                                            onClose={() => setDisplayTeammembers(false)}
+                                            open={displayTeammembers}
+                                        >
+                                        <List>
+                                        <ListItem>
+                                                <Typography style={{textAlign: 'center', fontWeight: 'bold', fontSize:20 }}>Team Members</Typography>
+                                        </ListItem>
+                                        {currentTeamMembers?.map((mem, keyVal) => ( 
+                                            <ListItem key={keyVal}>
+                                                <ListItemText style={{textAlign: 'center'}}>{mem?.first_name}{" "}{mem?.last_name}</ListItemText>
+                                            </ListItem>
+                                        ))}
+                                        </List>
+                                        <Button onClick={() => setDisplayTeammembers(false)} style={{color: 'red'}}>Close</Button>
+                                        </Dialog>
+                                        }
+                                    </ListItem>
                                     {proj?.sprintsdata?.map(
                                         (spr, innerKeyIndex) => (
                                             <ListItem
